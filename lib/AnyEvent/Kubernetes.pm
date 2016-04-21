@@ -20,4 +20,6 @@ use Moose;
 
 =cut
 
+with 'AnyEvent::Kubernetes::Role::APIAccess';
+
 return 42;
