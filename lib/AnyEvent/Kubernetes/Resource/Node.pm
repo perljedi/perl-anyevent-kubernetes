@@ -1,11 +1,11 @@
-package AnyEvent::Kubernetes::Resource;
+package AnyEvent::Kubernetes::Resource::Node;
 
 use strict;
 use warnings;
 
 use Moose;
 
-with 'AnyEvent::Kubernetes::Role::APIAccess';
+extends 'AnyEvent::Kubernetes::Resource';
 
 __PACKAGE__->meta->make_immutable;
 
