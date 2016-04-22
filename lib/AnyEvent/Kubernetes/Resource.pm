@@ -5,7 +5,11 @@ use warnings;
 
 use Moose;
 
-with 'AnyEvent::Kubernetes::Role::APIAccess';
+has api_access => (
+    is       => 'r',
+    isa      => 'AnyEvent::Kubernetes::APIAccess',
+    required => 1,
+);
 
 __PACKAGE__->meta->make_immutable;
 

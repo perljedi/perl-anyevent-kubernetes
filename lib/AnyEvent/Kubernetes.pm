@@ -20,7 +20,31 @@ use Moose;
 
 =cut
 
-with 'AnyEvent::Kubernetes::Role::APIAccess';
+has api_access => (
+    is       => 'r',
+    isa      => 'AnyEvent::Kubernetes::APIAccess',
+    required => 1,
+);
+
+has url => (
+    is       => 'rw',
+    isa      => 'Str',
+    required => 1,
+    default  => 'http://localhost:8080/api/v1'
+);
+
+around BUILDARGS => sub {
+    my $orig = shift;
+    my $class = shift;
+    my(%input) = @_;
+    my(%acces_options) = ();
+    foreach my $field (qw(password username token ssl_cert_file ssl_key_file ssl_ca_file ssl_verify)){
+        $acces_options{$field} = delete $input{$field} if(exists $input{$field});
+    }
+    $input{api_access} = AnyEvent::Kubernetes::APIAccess->new($access_options);
+    return $class->$orig(%input);
+};
+
 
 __PACKAGE__->meta->make_immutable;
 
