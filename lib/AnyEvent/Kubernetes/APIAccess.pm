@@ -4,6 +4,13 @@ use warnings;
 
 use Moose;
 
+has url => (
+    is       => 'rw',
+    isa      => 'Str',
+    required => 1,
+    default  => 'http://localhost:8080/api/v1'
+);
+
 has password => (
 	is       => 'ro',
 	isa      => 'Str',
@@ -20,14 +27,6 @@ has token => (
 	is       => 'ro',
 	isa      => 'Str',
 	required => 0
-);
-
-has 'json' => (
-    is       => 'ro',
-    isa      => JSON::MaybeXS::JSON,
-    required => 1,
-    lazy     => 1,
-    builder  => '_build_json',
 );
 
 has ssl_cert_file => (
@@ -53,6 +52,8 @@ has ssl_verify => (
     isa      => 'Str',
     required => 0,
 );
+
+with 'AnyEvent::Kubernetes::Role::JSON';
 
 around BUILDARGS => sub {
 	my $orig = shift;
@@ -101,7 +102,7 @@ sub get_request_options {
     		$options{headers}{Authorization} = "Bearer ".$self->token;
     	}
     }
-    return want_array ? %options : \%options;
+    return wantarray ? %options : \%options;
 }
 
 return 42;
