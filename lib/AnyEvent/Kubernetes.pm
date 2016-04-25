@@ -52,6 +52,22 @@ around BUILDARGS => sub {
     return $class->$orig(%input);
 };
 
+sub list_namespaces {
+    my $self = shift;
+    my(%options) = @_;
+    my(%access_options) = $self->api_access->get_request_options;
+    http_request
+        GET => $self->api_access->url.'/api/v1/namespaces',
+        %access_options,
+        sub {
+            my($body, $headers) = @_;
+            my($namespaceList) = $self->json->decode($body);
+            if($options{cb}){
+                $options{cb}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%$namespaceList, api_access=>$self->api_access));
+            }
+        };
+};
+
 sub _build_default_namespace {
     my $self = shift;
     my(%options) = $self->api_access->get_request_options;
