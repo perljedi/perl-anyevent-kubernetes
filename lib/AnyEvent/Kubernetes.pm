@@ -35,7 +35,7 @@ has default_namespace => (
     isa     => 'AnyEvent::Kubernetes::Resource::Namespace',
     builder => '_build_default_namespace',
     lazy    => 1,
-    handles => [qw(list_pods)],
+    handles => [qw(list_pods list_services list_replicationcontrollers)],
 );
 
 with 'AnyEvent::Kubernetes::Role::JSON';
