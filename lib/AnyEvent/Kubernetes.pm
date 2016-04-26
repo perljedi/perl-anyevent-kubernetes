@@ -9,6 +9,7 @@ use AnyEvent;
 use AnyEvent::HTTP;
 use AnyEvent::Kubernetes::ResourceFactory;
 use AnyEvent::Kubernetes::APIAccess;
+use syntax 'try';
 
 =head1 SYNOPSIS
 
@@ -54,7 +55,7 @@ has default_namespace => (
 );
 
 with 'AnyEvent::Kubernetes::Role::JSON';
-with 'AnyEvent::Kubernetes::Role::ResourceLister';
+with 'AnyEvent::Kubernetes::Role::ResourceFetcher';
 
 around BUILDARGS => sub {
     my $orig = shift;
@@ -70,12 +71,19 @@ around BUILDARGS => sub {
 
 sub list_namespaces {
     my $self = shift;
-    $self->_list_resource('namespaces', @_);
+    $self->_fetch_resource('namespaces', @_);
+}
+
+sub get_namespace {
+    my $self = shift;
+    my $namespace = shift;
+
+    $self->_fetch_resource('namespaces/'.$namespace, @_);
 }
 
 sub list_nodes {
     my $self = shift;
-    $self->_list_resource('nodes', @_);
+    $self->_fetch_resource('nodes', @_);
 }
 
 sub _build_metadata {

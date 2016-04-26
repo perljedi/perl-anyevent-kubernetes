@@ -1,0 +1,5 @@
+LimitRanges
+PersistentVolumeClaims
+PodTemplates
+ResourceQuotas
+
