@@ -30,15 +30,31 @@ has api_access => (
     required => 1,
 );
 
+has metadata => (
+    is       => 'ro',
+    isa      => 'HashRef',
+    required => 1,
+    builder  => '_build_metadata',
+);
+
 has default_namespace => (
     is      => 'rw',
     isa     => 'AnyEvent::Kubernetes::Resource::Namespace',
     builder => '_build_default_namespace',
     lazy    => 1,
-    handles => [qw(list_pods list_services list_replicationcontrollers)],
+    handles => [qw(
+        list_pods
+        list_services
+        list_replication_controllers
+        list_events
+        list_endpoints
+        list_secrets
+        list_service_accounts
+    )],
 );
 
 with 'AnyEvent::Kubernetes::Role::JSON';
+with 'AnyEvent::Kubernetes::Role::ResourceLister';
 
 around BUILDARGS => sub {
     my $orig = shift;
@@ -54,19 +70,19 @@ around BUILDARGS => sub {
 
 sub list_namespaces {
     my $self = shift;
-    my(%options) = @_;
-    my(%access_options) = $self->api_access->get_request_options;
-    http_request
-        GET => $self->api_access->url.'/api/v1/namespaces',
-        %access_options,
-        sub {
-            my($body, $headers) = @_;
-            my($namespaceList) = $self->json->decode($body);
-            if($options{cb}){
-                $options{cb}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%$namespaceList, api_access=>$self->api_access));
-            }
-        };
-};
+    $self->_list_resource('namespaces', @_);
+}
+
+sub list_nodes {
+    my $self = shift;
+    $self->_list_resource('nodes', @_);
+}
+
+sub _build_metadata {
+    return {
+        selfLink  => '/api/v1'
+    }
+}
 
 sub _build_default_namespace {
     my $self = shift;

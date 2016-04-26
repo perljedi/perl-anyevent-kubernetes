@@ -6,12 +6,7 @@ use warnings;
 use Moose;
 
 extends 'AnyEvent::Kubernetes::Resource';
-
-has spec => (
-    is       => 'rw',
-    isa      => 'HashRef',
-    required => 1,
-);
+with 'AnyEvent::Kubernetes::Resource::Role::Spec';
 
 __PACKAGE__->meta->make_immutable;
 
