@@ -9,6 +9,7 @@ use AnyEvent;
 use AnyEvent::HTTP;
 use AnyEvent::Kubernetes::ResourceFactory;
 use AnyEvent::Kubernetes::APIAccess;
+use YAML::XS;
 use syntax 'try';
 
 =head1 SYNOPSIS
@@ -84,6 +85,59 @@ sub get_namespace {
 sub list_nodes {
     my $self = shift;
     $self->_fetch_resource('nodes', @_);
+}
+
+sub get_node {
+    my $self = shift;
+    my $node = shift;
+
+    $self->_fetch_resource('nodes/'.$node, @_);
+}
+
+sub create {
+    my $self = shift;
+    my $file_or_object = shift;
+    my(%options) = @_;
+    my $object;
+
+    if(ref $file_or_object){
+        $object = $file_or_object;
+    }else{
+        open(my $fh, '<', $file_or_object) || die "Couldn't open supplied file: $!\n";
+        my $string = do { local $/; <$fh> };
+        close($fh);
+        if($file_or_object =~ m/js(?:on)?$/) {
+            $object = $self->json->decode($string);
+        }
+        else {
+            $object = YAML::XS::Load $string;
+        }
+    }
+
+    my(%apiOptions) = $self->api_access->get_request_options;
+    http_request
+        POST => $self->api_access->url.'/api/v1/namespaces/default/'.lc($object->{kind}).'s',
+        body => $self->json->encode($object),
+        %apiOptions,
+        sub {
+            my($body, $headers) = @_;
+            if($headers->{Status} < 200 || $headers->{Status} > 400){
+                if($options{error}){
+                    try {
+                        my $message = $self->json->decode($body);
+                        $options{error}->($message);
+                    } catch ($e) {
+                        $options{error}->($body);
+                    }
+                }
+            }else{
+                if($options{cb}){
+                    my $resourceHash = $self->json->decode($body);
+                    $options{cb}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%$resourceHash, api_access => $self->api_access));
+                }
+            }
+        };
+
 }
 
 sub _build_metadata {

@@ -29,7 +29,6 @@ sub _fetch_resource {
 	$form{labelSelector}=$self->_build_selector_from_hash($options{labels}) if (exists $options{labels});
 	$form{fieldSelector}=$self->_build_selector_from_hash($options{fields}) if (exists $options{fields});
 	$uri->query_form(%form);
-    print "Requesting $uri\n";
 
     http_request
         GET => $uri,
