@@ -17,21 +17,21 @@ has url => (
 );
 
 has password => (
-	is       => 'ro',
-	isa      => 'Str',
-	required => 0,
+    is       => 'ro',
+    isa      => 'Str',
+    required => 0,
 );
 
 has username => (
-	is       => 'ro',
-	isa      => 'Str',
-	required => 0,
+    is       => 'ro',
+    isa      => 'Str',
+    required => 0,
 );
 
 has token => (
-	is       => 'ro',
-	isa      => 'Str',
-	required => 0
+    is       => 'ro',
+    isa      => 'Str',
+    required => 0
 );
 
 has ssl_cert_file => (
@@ -61,33 +61,33 @@ has ssl_verify => (
 with 'AnyEvent::Kubernetes::Role::JSON';
 
 around BUILDARGS => sub {
-	my $orig = shift;
-	my $class = shift;
-	my(%input) = @_;
-	if(ref($input{token})){
-		if($input{token}->can('getlines')){
-			$input{token} = join('', $input{token}->getlines);
-		}
-		elsif (ref($input{token}) eq 'GLOB') {
-			my $fh = $input{token};
-			$input{token} = do{ local $/; <$fh>};
-		}
-	}elsif (exists $input{token} && -f $input{token}) {
-		open(my $fh, '<', $input{token});
-		$input{token} = do{ local $/; <$fh>};
-		close($fh);
-	}
-	if(! exists $input{api_version}){
-		if(exists $input{base_path}){
-			if($input{base_path} =~ m{/api/(v[^/]+)}){
-				$input{api_version} = $1;
-			}
-		}
-		else {
-			$input{api_version}='v1';
-		}
-	}
-	return $class->$orig(%input);
+    my $orig = shift;
+    my $class = shift;
+    my(%input) = @_;
+    if(ref($input{token})){
+        if($input{token}->can('getlines')){
+            $input{token} = join('', $input{token}->getlines);
+        }
+        elsif (ref($input{token}) eq 'GLOB') {
+            my $fh = $input{token};
+            $input{token} = do{ local $/; <$fh>};
+        }
+    }elsif (exists $input{token} && -f $input{token}) {
+        open(my $fh, '<', $input{token});
+        $input{token} = do{ local $/; <$fh>};
+        close($fh);
+    }
+    if(! exists $input{api_version}){
+        if(exists $input{base_path}){
+            if($input{base_path} =~ m{/api/(v[^/]+)}){
+                $input{api_version} = $1;
+            }
+        }
+        else {
+            $input{api_version}='v1';
+        }
+    }
+    return $class->$orig(%input);
 };
 
 sub get_request_options {
@@ -101,11 +101,11 @@ sub get_request_options {
             verify    => $self->ssl_verify,
         };
         if ($self->username && $self->password) {
-    		$options{headers}{Authorization} = "Basic ".encode_base64($self->username.':'.$self->password);
-    	}
-    	elsif($self->token){
-    		$options{headers}{Authorization} = "Bearer ".$self->token;
-    	}
+            $options{headers}{Authorization} = "Basic ".encode_base64($self->username.':'.$self->password);
+        }
+        elsif($self->token){
+            $options{headers}{Authorization} = "Bearer ".$self->token;
+        }
     }
     return wantarray ? %options : \%options;
 }
@@ -153,6 +153,81 @@ sub handle_simple_request {
         $cv->recv;
         return $resourceList;
     }
+}
+
+sub handle_streaming_request {
+    my $self = shift;
+    my $method = shift;
+    my $uri = shift;
+    my(%form) = $uri->query_form;
+    $form{watch} = 'true';
+    $form{resourceVersion} = delete $options{resourceVersion} || 0;
+    $uri->query_form(%form);
+    my(%options) =  @_;
+    my $body = delete $options{body};
+
+    my($cv, $resourceList);
+    my(%access_options) = $self->get_request_options;
+
+    my $chunk = '';
+    http_request
+        $method, $uri,
+        want_body_handle => 1,
+        %access_options,
+        body => $body,
+        sub {
+            my($handle, $headers) = @_;
+            if(! $handle){
+                if($options{error}){
+                    $options{error}->("Failed to connect to kubernetes");
+                }
+                return;
+            }
+            $handle->on_read(
+                sub {
+                    my $buf = $handle->{rbuf};
+                    $handle->{rbuf} = '';
+                    foreach my $line (split(/\r\n/, $buf)) {
+
+                        # Skip empty lines, or lines containing only hex numbers (length of next blob)
+                        unless ($line =~ m/^\s*$/ || $line =~ m/^[0-9a-f]+$/) {
+                            $chunk .= $line;
+                            my $update;
+                            try {
+                                $update = $self->json->decode($chunk);
+                                use Data::Dumper; print Dumper($update)."\n";
+                                $chunk  = '';
+                                $options{resourceVersion} = $update->{object}{metadata}{resourceVersion};
+                                $options{change}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%{ $update->{object} }, api_access => $self), $update->{type});
+                            }
+                            catch($e) {
+                                # Ignore this error, probably means we have an incomplete JSON
+                                # blob, and well get the rest of it in the next call
+                            };
+                        }
+                    }
+                }
+            );
+            $handle->on_error(
+                sub {
+                    my(undef, undef, $message) = @_;
+                    if($options{error}){
+                        $options{error}->($message);
+                    }
+                    $handle->destroy;
+                }
+            );
+            $handle->on_eof(
+                sub {
+                    if($options{auto_reconnect}){
+                        $self->handle_streaming_request($method, $uri, %options)
+                    }
+                    else {
+                        $options{disconnect}->();
+                    }
+                }
+            );
+        };
 }
 
 return 42;

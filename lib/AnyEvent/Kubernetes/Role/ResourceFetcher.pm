@@ -30,43 +30,13 @@ sub _fetch_resource {
     $form{fieldSelector}=$self->_build_selector_from_hash($options{fields}) if (exists $options{fields});
     $uri->query_form(%form);
 
-    $self->api_access->handle_simple_request(GET => $uri, %options);
-    # my($cv, $resourceList);
-    # my(%access_options) = $self->api_access->get_request_options;
-    # my $return = delete $options{return};
-    # if($return){
-    #     $cv = AnyEvent->condvar;
-    # }
-    #
-    # http_request
-    #     GET => $uri,
-    #     %access_options,
-    #     sub {
-    #         my($body, $headers) = @_;
-    #         if($headers->{Status} < 200 || $headers->{Status} > 400){
-    #             if($options{error}){
-    #                 try {
-    #                     my $message = $self->json->decode($body);
-    #                     $options{error}->($message);
-    #                 } catch ($e) {
-    #                     $options{error}->($body);
-    #                 }
-    #             }
-    #         }else{
-    #             if($options{cb}){
-    #                 my $resourceHash = $self->json->decode($body);
-    #                 $options{cb}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%$resourceHash, api_access => $self->api_access));
-    #             }
-    #         }
-    #         if($cv){
-    #             $cv->send;
-    #         }
-    #     };
-    #
-    # if($cv){
-    #     $cv->recv;
-    #     return $resourceList;
-    # }
+    if($options{change}){
+        $self->api_access->handle_streaming_request(GET => $uri, %options);
+    }
+    else {
+        $self->api_access->handle_simple_request(GET => $uri, %options);
+    }
+
 }
 
 sub _build_selector_from_hash {
