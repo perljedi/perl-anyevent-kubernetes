@@ -215,6 +215,7 @@ sub handle_streaming_request {
                         $options{error}->($message);
                     }
                     $handle->destroy;
+                    $options{disconnect}->() if($options{disconnect});
                 }
             );
             $handle->on_eof(

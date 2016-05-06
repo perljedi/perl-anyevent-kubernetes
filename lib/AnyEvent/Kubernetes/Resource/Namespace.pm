@@ -15,9 +15,21 @@ sub list_pods {
     $self->_fetch_resource('pods', @_);
 }
 
+sub get_pod {
+    my $self = shift;
+    my $name = shift;
+    $self->_fetch_resource('pods/'.$name, @_);
+}
+
 sub list_services {
     my $self = shift;
     $self->_list_resource('services', @_);
+}
+
+sub get_service {
+    my $self = shift;
+    my $name = shift;
+    $self->_fetch_resource('services/'.$name, @_);
 }
 
 sub list_replication_controllers {
@@ -38,21 +50,46 @@ sub list_events {
     $self->_fetch_resource('events', @_);
 }
 
+sub get_event {
+    my $self = shift;
+    my $name = shift;
+    $self->_fetch_resource('events/'.$name, @_);
+}
+
 sub list_endpoints {
     my $self = shift;
     $self->_fetch_resource('endpoints', @_);
 }
+
+sub get_endpoint {
+    my $self = shift;
+    my $name = shift;
+    $self->_fetch_resource('endpoints/'.$name, @_);
+}
+
 
 sub list_secrets {
     my $self = shift;
     $self->_fetch_resource('secrets', @_);
 }
 
+sub get_secret {
+    my $self = shift;
+    my $name = shift;
+    $self->_fetch_resource('secrets/'.$name, @_);
+}
+
+
 sub list_service_accounts {
     my $self = shift;
     $self->_fetch_resource('serviceaccounts', @_);
 }
 
+sub get_service_account {
+    my $self = shift;
+    my $name = shift;
+    $self->_fetch_resource('serviceaccounts/'.$name, @_);
+}
 
 
 __PACKAGE__->meta->make_immutable;
