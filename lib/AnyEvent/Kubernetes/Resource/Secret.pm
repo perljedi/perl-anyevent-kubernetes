@@ -17,6 +17,14 @@ has type => (
     isa  => 'Str',
 );
 
+around "as_hashref" => sub {
+	my ($orig, $self) = @_;
+	my $ref = $self->$orig;
+	$ref->{data} = $self->data;
+    $ref->{type} = $self->type;
+	return $ref;
+};
+
 __PACKAGE__->meta->make_immutable;
 
 return 42;

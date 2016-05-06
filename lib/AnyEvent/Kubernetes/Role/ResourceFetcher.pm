@@ -16,58 +16,66 @@ sub _fetch_resource {
     my $self = shift;
     my $resource = shift;
     my(%options) = @_;
-    my($cv, $resourceList);
-    my $return = delete $options{return};
-    if($return){
-        $cv = AnyEvent->condvar;
+
+
+    my $uri;
+    if(ref($resource) && $resource->isa('URI')){
+        $uri = $resource
     }
-
-    my(%access_options) = $self->api_access->get_request_options;
-
-    my $uri = URI->new($self->api_access->url.$self->metadata->{selfLink}.'/'.$resource);
-	my(%form) = ();
-	$form{labelSelector}=$self->_build_selector_from_hash($options{labels}) if (exists $options{labels});
-	$form{fieldSelector}=$self->_build_selector_from_hash($options{fields}) if (exists $options{fields});
-	$uri->query_form(%form);
-
-    http_request
-        GET => $uri,
-        %access_options,
-        sub {
-            my($body, $headers) = @_;
-            if($headers->{Status} < 200 || $headers->{Status} > 400){
-                if($options{error}){
-                    try {
-                        my $message = $self->json->decode($body);
-                        $options{error}->($message);
-                    } catch ($e) {
-                        $options{error}->($body);
-                    }
-                }
-            }else{
-                if($options{cb}){
-                    my $resourceHash = $self->json->decode($body);
-                    $options{cb}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%$resourceHash, api_access => $self->api_access));
-                }
-            }
-            if($cv){
-                $cv->send;
-            }
-        };
-
-    if($cv){
-        $cv->recv;
-        return $resourceList;
+    else {
+        $uri = URI->new($self->api_access->url.$self->metadata->{selfLink}.'/'.$resource);
     }
+    my(%form) = ();
+    $form{labelSelector}=$self->_build_selector_from_hash($options{labels}) if (exists $options{labels});
+    $form{fieldSelector}=$self->_build_selector_from_hash($options{fields}) if (exists $options{fields});
+    $uri->query_form(%form);
+
+    $self->api_access->handle_simple_request(GET => $uri, %options);
+    # my($cv, $resourceList);
+    # my(%access_options) = $self->api_access->get_request_options;
+    # my $return = delete $options{return};
+    # if($return){
+    #     $cv = AnyEvent->condvar;
+    # }
+    #
+    # http_request
+    #     GET => $uri,
+    #     %access_options,
+    #     sub {
+    #         my($body, $headers) = @_;
+    #         if($headers->{Status} < 200 || $headers->{Status} > 400){
+    #             if($options{error}){
+    #                 try {
+    #                     my $message = $self->json->decode($body);
+    #                     $options{error}->($message);
+    #                 } catch ($e) {
+    #                     $options{error}->($body);
+    #                 }
+    #             }
+    #         }else{
+    #             if($options{cb}){
+    #                 my $resourceHash = $self->json->decode($body);
+    #                 $options{cb}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%$resourceHash, api_access => $self->api_access));
+    #             }
+    #         }
+    #         if($cv){
+    #             $cv->send;
+    #         }
+    #     };
+    #
+    # if($cv){
+    #     $cv->recv;
+    #     return $resourceList;
+    # }
 }
 
 sub _build_selector_from_hash {
-	my($self, $select_hash) = @_;
-	my(@selectors);
-	foreach my $label (keys %{ $select_hash }){
-		push @selectors, $label.'='.$select_hash->{$label};
-	}
-	return \@selectors;
+    my($self, $select_hash) = @_;
+    my(@selectors);
+    foreach my $label (keys %{ $select_hash }){
+        push @selectors, $label.'='.$select_hash->{$label};
+    }
+    return join(',',@selectors);
 }
 
 

@@ -26,6 +26,13 @@ sub list_replication_controllers {
 }
 alias list_rc => 'list_replication_controllers';
 
+sub get_replication_controller {
+    my $self = shift;
+    my $name = shift;
+    $self->_fetch_resource('replicationcontrollers/'.$name, @_);
+}
+alias get_rc => 'get_replication_controller';
+
 sub list_events {
     my $self = shift;
     $self->_fetch_resource('events', @_);

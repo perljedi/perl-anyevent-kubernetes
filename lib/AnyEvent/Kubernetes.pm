@@ -48,10 +48,12 @@ has default_namespace => (
         list_pods
         list_services
         list_replication_controllers
+        list_rc
         list_events
         list_endpoints
         list_secrets
         list_service_accounts
+        get_rc
     )],
 );
 

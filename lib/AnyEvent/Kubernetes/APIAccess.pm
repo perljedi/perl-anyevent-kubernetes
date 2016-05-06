@@ -4,6 +4,11 @@ use warnings;
 
 use Moose;
 
+use AnyEvent;
+use AnyEvent::HTTP;
+use AnyEvent::Kubernetes::ResourceFactory;
+use syntax 'try';
+
 has url => (
     is       => 'rw',
     isa      => 'Str',
@@ -103,6 +108,51 @@ sub get_request_options {
     	}
     }
     return wantarray ? %options : \%options;
+}
+
+sub handle_simple_request {
+    my $self = shift;
+    my $method = shift;
+    my $uri = shift;
+    my(%options) =  @_;
+    my $body = delete $options{body};
+
+    my($cv, $resourceList);
+    my(%access_options) = $self->get_request_options;
+    my $return = delete $options{return};
+    if($return){
+        $cv = AnyEvent->condvar;
+    }
+    http_request
+        $method, $uri,
+        body => $body,
+        %access_options,
+        sub {
+            my($body, $headers) = @_;
+            if($headers->{Status} < 200 || $headers->{Status} > 400){
+                if($options{error}){
+                    try {
+                        my $message = $self->json->decode($body);
+                        $options{error}->($message);
+                    } catch ($e) {
+                        $options{error}->($body);
+                    }
+                }
+            }else{
+                if($options{cb}){
+                    my $resourceHash = $self->json->decode($body);
+                    $options{cb}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%$resourceHash, api_access => $self));
+                }
+            }
+            if($cv){
+                $cv->send;
+            }
+        };
+
+    if($cv){
+        $cv->recv;
+        return $resourceList;
+    }
 }
 
 return 42;
