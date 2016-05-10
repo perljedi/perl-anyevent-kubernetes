@@ -12,7 +12,7 @@ describe "AnyEvent::Kubernetes::Resource::Namespace" => sub {
     my($kube);
     before all => sub {
         $kube = AnyEvent::Kubernetes->new(url => "http://172.18.8.101:8080");
-        spyOn('AnyEvent::HTTP', 'http_request')
+        spyOn('AnyEvent::Kubernetes::APIAccess', 'http_request')
             ->andReturn(sub {
                 my($callback) = pop @_;
                 $callback->({},
