@@ -2,16 +2,11 @@
 use strict;
 use warnings;
 use Test::Spec;
-use Test::More;
-use Test::Deep;
-use Test::Fatal qw(lives_ok);
 use lib qw(..);
 use AnyEvent::Kubernetes;
 use Jasmine::Spy qw(spyOn stopSpying expectSpy getCalls);
 use base qw(Test::Spec);
-use Scalar::Util qw(weaken isweak);
-use vars qw($sut $ns);
-use HTTP::Response;
+use vars qw($sut);
 
 describe "AnyEvent::Kubernetes::Resource::Namespace" => sub {
     my($kube);

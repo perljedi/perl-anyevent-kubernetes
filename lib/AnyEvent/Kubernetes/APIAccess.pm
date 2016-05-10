@@ -7,6 +7,8 @@ use Moose;
 use AnyEvent;
 use AnyEvent::HTTP;
 use AnyEvent::Kubernetes::ResourceFactory;
+use MIME::Base64;
+
 use syntax 'try';
 
 has url => (
@@ -100,12 +102,12 @@ sub get_request_options {
             key_file  => $self->ssl_key_file,
             verify    => $self->ssl_verify,
         };
-        if ($self->username && $self->password) {
-            $options{headers}{Authorization} = "Basic ".encode_base64($self->username.':'.$self->password);
-        }
-        elsif($self->token){
-            $options{headers}{Authorization} = "Bearer ".$self->token;
-        }
+    }
+    if ($self->username && $self->password) {
+        $options{headers}{Authorization} = "Basic ".encode_base64($self->username.':'.$self->password);
+    }
+    elsif($self->token){
+        $options{headers}{Authorization} = "Bearer ".$self->token;
     }
     return wantarray ? %options : \%options;
 }
