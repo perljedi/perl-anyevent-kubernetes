@@ -12,11 +12,10 @@ describe "AnyEvent::Kubernetes::Resource::Namespace" => sub {
     my($kube);
     before all => sub {
         $kube = AnyEvent::Kubernetes->new(url => "http://172.18.8.101:8080");
-        spyOn('AnyEvent::Kubernetes::APIAccess', 'http_request')
+        spyOn('AnyEvent::Kubernetes', 'http_request')
             ->andReturn(sub {
                 my($callback) = pop @_;
-                $callback->({},
-                    '{"kind":"Namespace", "apiVersion":"v1", "metadata":{ "selfLink":"/api/v1/namespaces/default" }}');
+                $callback->('{"kind":"Namespace", "apiVersion":"v1", "metadata":{ "selfLink":"/api/v1/namespaces/default" }}', {});
                 });
         $sut = $kube->default_namespace;
         spyOn($sut, '_fetch_resource');
