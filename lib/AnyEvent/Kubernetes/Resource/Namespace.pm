@@ -23,7 +23,7 @@ sub get_pod {
 
 sub list_services {
     my $self = shift;
-    $self->_list_resource('services', @_);
+    $self->_fetch_resource('services', @_);
 }
 
 sub get_service {

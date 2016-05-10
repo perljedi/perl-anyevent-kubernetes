@@ -159,11 +159,11 @@ sub handle_streaming_request {
     my $self = shift;
     my $method = shift;
     my $uri = shift;
+    my(%options) = @_;
     my(%form) = $uri->query_form;
     $form{watch} = 'true';
     $form{resourceVersion} = delete $options{resourceVersion} || 0;
     $uri->query_form(%form);
-    my(%options) =  @_;
     my $body = delete $options{body};
 
     my($cv, $resourceList);
@@ -195,7 +195,6 @@ sub handle_streaming_request {
                             my $update;
                             try {
                                 $update = $self->json->decode($chunk);
-                                use Data::Dumper; print Dumper($update)."\n";
                                 $chunk  = '';
                                 $options{resourceVersion} = $update->{object}{metadata}{resourceVersion};
                                 $options{change}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%{ $update->{object} }, api_access => $self), $update->{type});
