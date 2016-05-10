@@ -141,9 +141,10 @@ sub handle_simple_request {
                     }
                 }
             }else{
+                my $resourceHash = $self->json->decode($body);
+                $resourceList = AnyEvent::Kubernetes::ResourceFactory->get_resource(%$resourceHash, api_access => $self);
                 if($options{cb}){
-                    my $resourceHash = $self->json->decode($body);
-                    $options{cb}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%$resourceHash, api_access => $self));
+                    $options{cb}->($resourceList);
                 }
             }
             if($cv){
