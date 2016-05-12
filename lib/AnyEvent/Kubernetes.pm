@@ -52,8 +52,10 @@ has default_namespace => (
         list_events
         list_endpoints
         list_secrets
-        list_service_accounts
         get_rc
+        get_service
+        get_pod
+        get_event
     )],
 );
 
@@ -82,6 +84,11 @@ sub get_namespace {
     my $namespace = shift;
 
     $self->_fetch_resource('namespaces/'.$namespace, @_);
+}
+
+sub list_service_accounts {
+    my $self = shift;
+    $self->_fetch_resource('serviceaccounts', @_);
 }
 
 sub list_nodes {
