@@ -35,37 +35,47 @@ describe "AnyEvent::Kubernetes::Resource::Namespace" => sub {
         };
     };
     describe "handle_simple_request" => sub {
-        my($response_body, $response_headers);
+        my($response_body, $response_headers, $cv);
         before all => sub {
             $sut = AnyEvent::Kubernetes::APIAccess->new;
         };
         before each => sub {
             $response_headers = {Status=>200};
+            $cv = AnyEvent->condvar;
             # Slightly odd.. we have to spy on the is the APIAccess namespace because
             # it is an imported function.
             spyOn('AnyEvent::Kubernetes::APIAccess', 'http_request')->andCallFake(sub {
                 my $cb = pop @_;
                 $cb->($response_body, $response_headers);
+                $cv->send;
             });
             getCalls('AnyEvent::Kubernetes::APIAccess', 'http_request')->reset;
         };
         it "makes an http request" => sub {
             $response_body = '{"kind":"PodList", "items":[], "metadata":{}}';
-            $sut->handle_simple_request(GET => '/api/v1/namespaces', return => 1);
+            $sut->handle_simple_request(GET => '/api/v1/namespaces');
+            $cv->recv;
             expectSpy('AnyEvent::Kubernetes::APIAccess', 'http_request')->toHaveBeenCalled->once;
         };
         it "calls there error callback on error" => sub {
             $response_headers = {Status => 500};
             $response_body = '{"message":"fail"}';
             my $called = 0;
-            $sut->handle_simple_request(GET => '/api/v1/namespaces', return => 1, error=> sub { $called=1; });
+            $sut->handle_simple_request(GET => '/api/v1/namespaces', error=> sub { $called=1; });
+            $cv->recv;
             expectSpy('AnyEvent::Kubernetes::APIAccess', 'http_request')->toHaveBeenCalled->once;
             ok($called);
         };
-        it "calls the cb with request object on success" => sub {
+        it "calls the cb with requested object on success" => sub {
             my $object;
             $response_body = '{"kind":"PodList", "items":[], "metadata":{}}';
-            $sut->handle_simple_request(GET => '/api/v1/namespaces', return => 1, cb=> sub { $object = shift; });
+            $sut->handle_simple_request(GET => '/api/v1/namespaces', cb=> sub { $object = shift; });
+            $cv->recv;
+            isa_ok($object, 'AnyEvent::Kubernetes::ResourceList');
+        };
+        it "blocks and returns the object if return=>1 is passed" => sub {
+            $response_body = '{"kind":"PodList", "items":[], "metadata":{}}';
+            my $object=$sut->handle_simple_request(GET => '/api/v1/namespaces', return => 1);
             isa_ok($object, 'AnyEvent::Kubernetes::ResourceList');
         };
     };

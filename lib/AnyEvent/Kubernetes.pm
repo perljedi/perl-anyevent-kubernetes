@@ -116,30 +116,11 @@ sub create {
         }
     }
 
-    my(%apiOptions) = $self->api_access->get_request_options;
-    http_request
+    $self->api_access->handle_simple_request(
         POST => $self->api_access->url.'/api/v1/namespaces/default/'.lc($object->{kind}).'s',
         body => $self->json->encode($object),
-        %apiOptions,
-        sub {
-            my($body, $headers) = @_;
-            if($headers->{Status} < 200 || $headers->{Status} > 400){
-                if($options{error}){
-                    try {
-                        my $message = $self->json->decode($body);
-                        $options{error}->($message);
-                    } catch ($e) {
-                        $options{error}->($body);
-                    }
-                }
-            }else{
-                if($options{cb}){
-                    my $resourceHash = $self->json->decode($body);
-                    $options{cb}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%$resourceHash, api_access => $self->api_access));
-                }
-            }
-        };
-
+        %options
+    );
 }
 
 sub _build_metadata {
@@ -150,19 +131,7 @@ sub _build_metadata {
 
 sub _build_default_namespace {
     my $self = shift;
-    my(%options) = $self->api_access->get_request_options;
-    my $cv = AnyEvent->condvar;
-    my $namespace;
-    http_request
-        GET => $self->api_access->url.'/api/v1/namespaces/default',
-        %options,
-        sub {
-            my($body, $headers) = @_;
-            $namespace = $self->json->decode($body);
-            $cv->send;
-        };
-    $cv->recv;
-    return AnyEvent::Kubernetes::ResourceFactory->get_resource(%$namespace, api_access => $self->api_access);
+    return $self->api_access->handle_simple_request(GET => $self->api_access->url.'/api/v1/namespaces/default', return=>1);
 }
 
 __PACKAGE__->meta->make_immutable;
