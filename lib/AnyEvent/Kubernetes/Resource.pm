@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Moose;
+use Clone qw(clone);
 
 has api_access => (
     is       => 'ro',
@@ -46,6 +47,20 @@ sub as_hashref
     };
 }
 
+sub refresh {
+    my $self = shift;
+    my(%options) = @_;
+    my $cb = delete $options{cb};
+    $self->_fetch_resource('', %options, cb=> sub {
+        my($new_obj) = shift;
+        my $updated = $new_obj->as_hashref;
+        foreach my $key (grep(!/kind|apiVersion/, keys %$updated)){
+            $self->$key(clone($updated->{$key}));
+        }
+        $cb->($self);
+    });
+
+}
 
 __PACKAGE__->meta->make_immutable;
 

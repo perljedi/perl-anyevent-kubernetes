@@ -7,6 +7,8 @@ use Moose;
 
 extends 'AnyEvent::Kubernetes::Resource';
 
+with 'AnyEvent::Kubernetes::Resource::Role::Updatable';
+
 has data => (
     is   => 'rw',
     isa  => 'HashRef',
