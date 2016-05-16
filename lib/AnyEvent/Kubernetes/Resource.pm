@@ -57,9 +57,17 @@ sub refresh {
         foreach my $key (grep(!/kind|apiVersion/, keys %$updated)){
             $self->$key(clone($updated->{$key}));
         }
+        if($self->can('status')){
+            $self->status(clone($new_obj->status));
+        }
         $cb->($self);
     });
+}
 
+sub delete {
+    my $self = shift;
+    my(%options) = @_;
+    $self->api_access->handle_simple_request(DELETE => $self->api_access->url.$self->metadata->{selfLink}, %options);
 }
 
 __PACKAGE__->meta->make_immutable;

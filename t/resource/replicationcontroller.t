@@ -122,7 +122,7 @@ describe "AnyEvent::Kubernetes::Resource::ReplicationController" => sub {
                 }
             });
             my $cv = AnyEvent->condvar;
-            $sut->scale(2, cb=>sub { $called = 1; $cv->send; });
+            $sut->scale(2, update_interval=> 1, cb=>sub { $called = 1; $cv->send; });
             $cv->recv;
             expectSpy($sut, 'get_pods')->toHaveBeenCalled->exactly(2);
             ok($called);

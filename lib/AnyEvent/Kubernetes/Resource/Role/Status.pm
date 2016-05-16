@@ -5,7 +5,7 @@ use warnings;
 use Moose::Role;
 
 has status => (
-    is       => 'ro',
+    is       => 'rw',
     isa      => 'HashRef',
     required => 1,
 );
