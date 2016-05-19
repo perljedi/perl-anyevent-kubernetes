@@ -31,7 +31,7 @@ sub _fetch_resource {
     $uri->query_form(%form);
 
     if($options{change}){
-        $self->api_access->handle_streaming_request(GET => $uri, %options);
+        return $self->api_access->handle_streaming_request(GET => $uri, %options);
     }
     else {
         $self->api_access->handle_simple_request(GET => $uri, %options);

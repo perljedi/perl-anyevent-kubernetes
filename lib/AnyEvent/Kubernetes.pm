@@ -122,9 +122,14 @@ sub create {
             $object = YAML::XS::Load $string;
         }
     }
-
+    my $url;
+    if($object->{kind} eq 'Namespace'){
+        $url = $self->api_access->url.'/api/v1/namespaces';
+    }else{
+        $url = $self->api_access->url.'/api/v1/namespaces/default/'.lc($object->{kind}).'s'
+    }
     $self->api_access->handle_simple_request(
-        POST => $self->api_access->url.'/api/v1/namespaces/default/'.lc($object->{kind}).'s',
+        POST => $url,
         body => $self->json->encode($object),
         %options
     );

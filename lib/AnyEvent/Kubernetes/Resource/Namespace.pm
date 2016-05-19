@@ -91,7 +91,6 @@ sub get_service_account {
     $self->_fetch_resource('serviceaccounts/'.$name, @_);
 }
 
-
 __PACKAGE__->meta->make_immutable;
 
 return 42;

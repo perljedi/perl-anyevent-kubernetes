@@ -173,13 +173,20 @@ sub handle_streaming_request {
     my(%access_options) = $self->get_request_options;
 
     my $chunk = '';
-    http_request
+    my($gaurd, $handle, $loop);
+    my $cancelSub = sub {
+        $handle->destroy if($handle);
+        undef $gaurd;
+    };
+    $loop = sub {
+        $gaurd = http_request
         $method, $uri,
         want_body_handle => 1,
         %access_options,
         body => $body,
         sub {
-            my($handle, $headers) = @_;
+            $handle = shift;
+            my($headers) = @_;
             if(! $handle){
                 if($options{error}){
                     $options{error}->("Failed to connect to kubernetes");
@@ -187,50 +194,59 @@ sub handle_streaming_request {
                 return;
             }
             $handle->on_read(
-                sub {
-                    my $buf = $handle->{rbuf};
-                    $handle->{rbuf} = '';
-                    foreach my $line (split(/\r\n/, $buf)) {
+            sub {
+                my $buf = $handle->{rbuf};
+                $handle->{rbuf} = '';
+                foreach my $line (split(/\r\n/, $buf)) {
 
-                        # Skip empty lines, or lines containing only hex numbers (length of next blob)
-                        unless ($line =~ m/^\s*$/ || $line =~ m/^[0-9a-f]+$/) {
-                            $chunk .= $line;
-                            my $update;
-                            try {
-                                $update = $self->json->decode($chunk);
-                                $chunk  = '';
-                                $options{resourceVersion} = $update->{object}{metadata}{resourceVersion};
-                                $options{change}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%{ $update->{object} }, api_access => $self), $update->{type});
-                            }
-                            catch($e) {
-                                # Ignore this error, probably means we have an incomplete JSON
-                                # blob, and well get the rest of it in the next call
-                            };
+                    # Skip empty lines, or lines containing only hex numbers (length of next blob)
+                    unless ($line =~ m/^\s*$/ || $line =~ m/^[0-9a-f]+$/) {
+                        $chunk .= $line;
+                        my $update;
+                        try {
+                            $update = $self->json->decode($chunk);
+                            $chunk  = '';
+                            $options{resourceVersion} = $update->{object}{metadata}{resourceVersion};
+                            $options{change}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%{ $update->{object} }, api_access => $self), $update->{type});
                         }
+                        catch($e) {
+                            # Ignore this error, probably means we have an incomplete JSON
+                            # blob, and well get the rest of it in the next call
+                        };
                     }
                 }
+            }
             );
             $handle->on_error(
-                sub {
-                    my(undef, undef, $message) = @_;
+            sub {
+                my(undef, undef, $message) = @_;
+                if($message eq 'Connection timed out' && $options{auto_reconnect}){
+                    print "reconnecting\n";
+                    $loop->();
+                }else{
                     if($options{error}){
                         $options{error}->($message);
                     }
                     $handle->destroy;
                     $options{disconnect}->() if($options{disconnect});
                 }
+            }
             );
             $handle->on_eof(
                 sub {
                     if($options{auto_reconnect}){
-                        $self->handle_streaming_request($method, $uri, %options)
+                        print "reconnecting\n";
+                        $loop->();
                     }
-                    else {
+                    elsif($options{disconnect}) {
                         $options{disconnect}->();
                     }
                 }
             );
         };
+    };
+    $loop->();
+    return $cancelSub;
 }
 
 return 42;

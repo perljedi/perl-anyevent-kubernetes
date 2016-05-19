@@ -69,6 +69,19 @@ describe "AnyEvent::Kubernetes::Resource" => sub {
             is($sut->status->{updated}, 1);
         };
     };
+    describe "delete" => sub {
+        before all => sub {
+            spyOn($sut->api_access, 'handle_simple_request');
+        };
+        before each => sub {
+            getCalls($sut->api_access, 'handle_simple_request')->reset;
+        };
+        it "makes a delete request" => sub {
+            $sut->delete;
+            expectSpy($sut->api_access, 'handle_simple_request')->toHaveBeenCalled->once;
+            is(getCalls($sut->api_access, 'handle_simple_request')->mostRecent->[0], 'DELETE');
+        };
+    };
 };
 
 runtests;
