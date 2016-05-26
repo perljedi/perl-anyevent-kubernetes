@@ -25,7 +25,7 @@ describe "AnyEvent::Kubernetes::Resource::ReplicationController" => sub {
             },
         api_access => $kube->api_access);
     };
-    xdescribe "scale" => sub {
+    describe "scale" => sub {
         before all => sub {
             spyOn($sut, 'update');
             spyOn($sut, 'get_pods');
@@ -52,82 +52,46 @@ describe "AnyEvent::Kubernetes::Resource::ReplicationController" => sub {
         };
         it "calls the supplied callback if the number of pods matches the requested replica count" => sub {
             my $called = 0;
+            my $changeCallback;
+            $sut->spec->{replicas} = 1;
             spyOn($sut, 'update')->andCallFake(sub {
                 my(%options) = @_;
                 $options{cb}->();
             });
             spyOn($sut, 'get_pods')->andCallFake(sub {
                 my(%options) = @_;
-                $options{cb}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(
-                    kind => "PodList",
-                    items => [
-                        {
-                            metadata=>{},
-                            status=>{},
-                            spec=>{}
-                        }
-                    ],
-                    metadata=>{},
-                    apiVersion => 'v1',
-                    api_access => $sut->api_access,
-                ));
+                $changeCallback = $options{change};
+                return sub {};
             });
-            $sut->scale(1, cb=>sub { $called = 1 });
+            $sut->scale(2, cb=>sub { $called = 1 });
+            $changeCallback->(stub(is_ready => 1, metadata=>{name=>'myPod'}), 'ADDED');
+            $changeCallback->(stub(is_ready => 1, metadata=>{name=>'otherPod'}), 'ADDED');
             ok($called);
-
         };
-        it "schedules a second call to get_pods if the number is not correct yet" => sub {
+        it "doesn't call the callback on a scale down until atleast one delete has been seen" => sub {
             my $called = 0;
-            my $itteration = 1;
+            my $changeCallback;
+            $sut->spec->{replicas} = 3;
             spyOn($sut, 'update')->andCallFake(sub {
                 my(%options) = @_;
                 $options{cb}->();
             });
             spyOn($sut, 'get_pods')->andCallFake(sub {
                 my(%options) = @_;
-                if($itteration == 1){
-                    $options{cb}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(
-                        kind => "PodList",
-                        items => [
-                            {
-                                metadata=>{},
-                                status=>{},
-                                spec=>{}
-                            }
-                        ],
-                        metadata=>{},
-                        apiVersion => 'v1',
-                        api_access => $sut->api_access,
-                    ));
-                    $itteration++;
-                }else{
-                    $options{cb}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(
-                        kind => "PodList",
-                        items => [
-                            {
-                                metadata=>{},
-                                status=>{},
-                                spec=>{}
-                            },
-                            {
-                                metadata=>{},
-                                status=>{},
-                                spec=>{}
-                            }
-                        ],
-                        metadata=>{},
-                        apiVersion => 'v1',
-                        api_access => $sut->api_access,
-                    ));
-                }
+                $changeCallback = $options{change};
+                return sub {};
             });
-            my $cv = AnyEvent->condvar;
-            $sut->scale(2, update_interval=> 1, cb=>sub { $called = 1; $cv->send; });
-            $cv->recv;
-            expectSpy($sut, 'get_pods')->toHaveBeenCalled->exactly(2);
+            $sut->scale(2, cb=>sub { $called = 1 });
+            $changeCallback->(stub(is_ready => 1, metadata=>{name=>'myPod'}), 'ADDED');
+            $changeCallback->(stub(is_ready => 1, metadata=>{name=>'otherPod'}), 'ADDED');
+            $changeCallback->(stub(is_ready => 1, metadata=>{name=>'thirdPod'}), 'ADDED');
+            ok(!$called);
+            $changeCallback->(stub(is_ready => 0, metadata=>{name=>'otherPod'}), 'DELETED');
             ok($called);
-
         };
+    };
+    describe "rolling_update" => sub {
+
     };
 };
 

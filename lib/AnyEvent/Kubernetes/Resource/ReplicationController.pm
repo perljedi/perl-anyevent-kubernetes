@@ -6,6 +6,7 @@ use warnings;
 use Moose;
 use AnyEvent;
 use UUID::Tiny qw(:std);
+use Clone qw(clone);
 
 extends 'AnyEvent::Kubernetes::Resource';
 with 'AnyEvent::Kubernetes::Resource::Role::Spec';
@@ -28,7 +29,6 @@ sub scale {
         my $cancel;
         $cancel = $self->get_pods(change => sub {
             my($pod, $action) = @_;
-            print "$action - ".$pod->metadata->{name}." - ".($pod->is_ready ? "ready" : "not-ready")."\n";
             if($action eq 'DELETED'){
                 $seen_delete = 1;
                 delete $pods{$pod->metadata->{name}} if(exists($pods{$pod->metadata->{name}}));
@@ -39,25 +39,10 @@ sub scale {
                     delete $pods{$pod->metadata->{name}} if(exists($pods{$pod->metadata->{name}}));
                 }
             }
-            print join(", ", keys %pods)." - $type - $seen_delete\n";
             if(scalar(keys %pods) == $replicas && ($type eq 'up' || $seen_delete)){
-                print "Cancel == $cancel\n";
                 $cb->('scalled') if($cb);
                 $cancel->();
             }
-            # my($podList) = @_;
-            # if(scalar(@{ $podList->all }) == $replicas){
-            #     $cb->('scalled') if($cb);
-            # }else{
-            #     if(time - $st > $timeout){
-            #         if($options{error}){
-            #             $options{error}->({ message => "Timeout exceeded before reaching requested replica count", timeout=>$timeout, elapsed => time - $st });
-            #         }
-            #     }
-            #     else {
-            #         $gaurd = AnyEvent->timer(after => $interval, cb=>$options{cb});
-            #     }
-            # }
         }, error=>$options{error})
     };
     $self->update(%options);
@@ -66,13 +51,63 @@ sub scale {
 sub rolling_update {
     my($self) = shift;
     my(%options) = @_;
-    my $new_raw = $self->as_hashref;
+
+    my $new_raw = clone($self->as_hashref);
+
+    if(! $self->spec->{selector}{deployment}){
+        my $old_deploy = create_uuid_as_string();
+        $self->spec->{selector}{deployment} = $old_deploy;
+        $self->spec->{template}{metadata}{labels}{deployment} = $old_deploy;
+        $self->update();
+    }
+    use Data::Dumper; print Dumper($self->metadata)."\n";
     $new_raw->{spec}{replicas} = 0;
-    $new_raw->{metadata}{name} .= create_uuid_as_string();
+
+    my $deployment_id = create_uuid_as_string();
+    $new_raw->{metadata}{name} .= $deployment_id;
+    $new_raw->{metadata}{labels}{deployment} = $deployment_id;
+    $new_raw->{spec}{selector}{deployment} = $deployment_id;
+    $new_raw->{spec}{template}{metadata}{labels}{deployment} = $deployment_id;
+
     delete $new_raw->{metadata}{creationTimestamp};
     delete $new_raw->{metadata}{uid};
     delete $new_raw->{metadata}{selfLink};
-    use Data::Dumper; print Dumper($new_raw)."\n";
+    delete $new_raw->{spec}{securityContext};
+
+    my($scale_up, $scale_down, $clean_up, $new_rc);
+
+    $scale_up = sub {
+        $new_rc->scale($new_rc->spec->{replicas} + 1, cb=>$scale_down);
+    };
+
+    $scale_down = sub {
+        $self->scale($self->spec->{replicas} - 1, cb=> sub {
+            if($self->spec->{replicas} > 0){
+                $scale_up->();
+            }else{
+                $clean_up->();
+            }
+        });
+    };
+
+    $clean_up = sub {
+        $new_rc->metadata->{name} = $self->metadata->{name};
+        $self->delete(cb => sub {
+            $new_rc->update(cb => sub {
+                $options{cb}->($new_rc);
+            }, error => sub {use Data::Dumper; print Dumper(@_)."\n"});
+        }, error => sub {use Data::Dumper; print Dumper(@_)."\n"});
+    };
+    my $uri = URI->new_abs("..", $self->api_access->url.$self->metadata->{selfLink});
+    $self->api_access->handle_simple_request(
+        POST => $uri.'replicationcontrollers',
+        body => $self->json->encode($new_raw),
+        cb   => sub {
+            $new_rc = shift;
+            $scale_up->();
+        },
+        error => $options{error},
+    );
 }
 
 __PACKAGE__->meta->make_immutable;

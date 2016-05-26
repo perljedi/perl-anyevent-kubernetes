@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  labels:
+    name: goalie-kubernetes-watcher-v2
+  name: goalie-kubernetes-watcher-v2
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    k8s-app: goalie-kubernetes-watcher
+    version: v2
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        k8s-app: goalie-kubernetes-watcher
+        name: goalie-kubernetes-watcher
+        version: v2
+    spec:
+      imagePullSecrets:
+      - name:  lwdockerhub
+      containers:
+      - env:
+        - name: ETCD_NODES
+          value: service.etcd.mwp.liquidweb.com:2379
+        - name: ETCD_CERT_DIR
+          value: /certs
+        - name: STATSD_HOST
+          value: 10.255.254.247
+        - name: STATSD_PORT
+          value: "8125"
+        - name: SLACK_WEB_HOOK
+          value: https://hooks.slack.com/services/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
+        image: liquidweb/goalie-kubernetes-watcher
+        imagePullPolicy: Always
+        name: goalie-kubernetes-watcher
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        volumeMounts:
+        - mountPath: /certs
+          name: certs
+      dnsPolicy: ClusterFirst
+      
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: certs
+        secret:
+          secretName: goalie-etcd-certs
