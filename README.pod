@@ -1,5 +1,11 @@
 =pod
 
+=head1 Description
+
+AnyEvent::Kubernetes is an event driven interface to the Kubernetes REST API. The primary motivation for building
+this module is to expose some more advanced features of the API (watching) and allow some more advanced additional
+functionality (rolling-update), which really only make sense in an event driven set up.
+
 =head1 SYNOPSIS
 
   my $kube = AnyEvent::Kubernetes->new(url=>'http://127.0.0.1:8080', username=>'dave', password=>'davespassword');
@@ -12,6 +18,14 @@
 
   $kube->list_pods(onChange => sub {
     my($pod) = @_;
+  });
+
+  $kube->get_rc('my-controller', onSuccess => sub {
+    my $rc = shift;
+    $rc->spec->{template}{containers}[0]{image} = 'myimages/image:release-12345';
+    $rc->rolling_update(onSuccess=> sub {
+        print "Woot! rolling update successfull\n";
+    });
   });
 
 =head1 Standard Arguments
@@ -40,6 +54,10 @@ api will be a streaming connection sending real time updates for changes to any 
 The onChange callback will be evoked continuously every time a resource changes, and will be passed the resource object
 which changed, as well as the type of change (ADDED|MODIFIED|DELETED). It will also be called once for each item in the list
 (with a type of ADDED) immediately which will allow the building of an initial list.
+
+When onChange is supplied, the method will return a code reference which is effectively a cancellation callback. When you
+want to stop listening for changes to the list, invoke this callback and the persisten connection to the API server
+will be terminated, and the onChange callback will no longer be called.
 
 =back
 
