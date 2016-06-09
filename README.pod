@@ -115,6 +115,8 @@ Boolean flag to verify the source of the kubenetes server certificate. Defaults 
 
 An authorization token to be sent to kubernetes
 
+=back
+
 =item list_namespaces
 
 List kubernetes name spaces.
