@@ -75,4 +75,69 @@ The supplied hashref of key value pairs will be translated into labelSelector's 
 
 The supplied hashref of key value pairs will be translated into fieldSelector's for the kubernetes api.
 
+=back
+
+=head1 Methods
+
+=over
+
+=item new
+
+Creates a new instance of AnyEvent::Kubernetes.
+
+Required Arguments:
+
+=over
+
+=item url
+
+The base url to the kubernetes api. For Example http://172.18.8.101:8080/api/v1
+
+=back
+
+Optional Arguments:
+
+=over
+
+=item username, password
+
+Credentials used to authenticate to the kubernetes API server.
+
+=item ssl_cert_file, ssl_key_file, ssl_ca_file
+
+SSL certificate key and CA for client cert based authentication to kubernetes
+
+=item ssl_verify
+
+Boolean flag to verify the source of the kubenetes server certificate. Defaults to true.
+
+=item token
+
+An authorization token to be sent to kubernetes
+
+=item list_namespaces
+
+List kubernetes name spaces.
+
+=item get_namespace("default")
+
+Fetch a specific namespace by name
+
+=item list_service_accounts
+
+List kubernetes name spaces.
+
+=item list_nodes
+
+List kubernetes minions/nodes.
+
+=item get_node("myNode")
+
+Get a specific node.
+
+=item create(FILENAME | {})
+
+Create a new kubernetes resource. This method accepts either a path to a json or yaml file
+or a hashref of the equivelent datastructure.
+
 =cut
