@@ -79,9 +79,7 @@ The supplied hashref of key value pairs will be translated into fieldSelector's 
 
 =head1 Methods
 
-=over
-
-=item new
+=head3 new
 
 Creates a new instance of AnyEvent::Kubernetes.
 
@@ -117,27 +115,27 @@ An authorization token to be sent to kubernetes
 
 =back
 
-=item list_namespaces
+=head3 list_namespaces
 
 List kubernetes name spaces.
 
-=item get_namespace("default")
+=head3 get_namespace("default")
 
 Fetch a specific namespace by name
 
-=item list_service_accounts
+=head3 list_service_accounts
 
 List kubernetes name spaces.
 
-=item list_nodes
+=head3 list_nodes
 
 List kubernetes minions/nodes.
 
-=item get_node("myNode")
+=head3 get_node("myNode")
 
 Get a specific node.
 
-=item create(FILENAME | {})
+=head3 create(FILENAME | {})
 
 Create a new kubernetes resource. This method accepts either a path to a json or yaml file
 or a hashref of the equivelent datastructure.
