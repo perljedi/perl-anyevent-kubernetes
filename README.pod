@@ -1,5 +1,13 @@
 =pod
 
+=head1 NAME
+
+AnyEvent::Kubernetes
+
+=head1 VERSION
+
+version 0.01
+
 =head1 Description
 
 AnyEvent::Kubernetes is an event driven interface to the Kubernetes REST API. The primary motivation for building
@@ -139,5 +147,37 @@ Get a specific node.
 
 Create a new kubernetes resource. This method accepts either a path to a json or yaml file
 or a hashref of the equivelent datastructure.
+
+=head2 Delegated Methods
+
+The following methods can be called on the kube object and will be automatically delegated to the default namespace
+
+=over
+
+=item list_pods
+
+=item list_services
+
+=item list_replication_controllers
+
+=item list_rc
+
+=item list_events
+
+=item list_endpoints
+
+=item list_secrets
+
+=item get_rc
+
+=item get_service
+
+=item get_pod
+
+=item get_event
+
+=back
+
+See L<AnyEvent::Kubernetes::Rescource::Namepsace> for details on each of these.
 
 =cut
