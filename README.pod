@@ -3,12 +3,58 @@
 =head1 SYNOPSIS
 
   my $kube = AnyEvent::Kubernetes->new(url=>'http://127.0.0.1:8080', username=>'dave', password=>'davespassword');
-  $kube->list_pods(cb => sub{
+  $kube->list_pods(onSuccess => sub{
     my($pod_list) = @_;
+  }, onError => sub {
+    my($message) = @_;
+    print "Ohh no!  An error occured: ".$message."\n";
   });
 
-  $kube->watch_pods(activity_cb => sub {
+  $kube->list_pods(onChange => sub {
     my($pod) = @_;
-  })
+  });
+
+=head1 Standard Arguments
+
+Most methods take a couple of standard arguments.
+
+=over
+
+=item onSuccess => sub { ... }
+
+onSuccess is accepted by almost all methods, and will be invocked upon successfull completion of the operation.
+The supplied callback will be passed the involved oject, either a Resource object or a ResourceList Object.
+
+=item onError => sub {  }
+
+onError is also accepted by almost all methods, and is simply the converse of onSuccess.
+The supplied callback will be passed a message which could be a simple string, or a hasref.
+Simple strings generally indicate a communication failure with the api server, a hashref would be the decoded response from
+kubernetes.
+
+=item onChange => sub { ... }
+
+onChange is an optional argument to all "list" methods which will fundementally change the behavoir of the function,
+and should not be used in conjunction with onSuccess.  When onChange is supplied, the resulting connection to kubernetes
+api will be a streaming connection sending real time updates for changes to any of the resources in the resulting list.
+The onChange callback will be evoked continuously every time a resource changes, and will be passed the resource object
+which changed, as well as the type of change (ADDED|MODIFIED|DELETED). It will also be called once for each item in the list
+(with a type of ADDED) immediately which will allow the building of an initial list.
+
+=back
+
+=head2 List Filtering arguments
+
+All "list" methods accept the following parameters to filter the list of returned resources.
+
+=over
+
+=item labels => {}
+
+The supplied hashref of key value pairs will be translated into labelSelector's for the kubernetes api.
+
+=item fields => {}
+
+The supplied hashref of key value pairs will be translated into fieldSelector's for the kubernetes api.
 
 =cut
