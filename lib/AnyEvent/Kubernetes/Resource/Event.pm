@@ -7,6 +7,13 @@ use Moose;
 
 extends 'AnyEvent::Kubernetes::Resource';
 
+=head1 NAME
+
+AnyEvent::Kubernetes::Resource::Event
+
+=cut
+
+
 has involvedObject => (
     is       => 'rw',
     isa      => 'HashRef',

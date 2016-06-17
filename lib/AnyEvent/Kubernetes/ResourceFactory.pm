@@ -1,4 +1,5 @@
 package AnyEvent::Kubernetes::ResourceFactory;
+
 use strict;
 use warnings;
 
@@ -14,6 +15,13 @@ use AnyEvent::Kubernetes::Resource::Endpoints;
 use AnyEvent::Kubernetes::Resource::Secret;
 use AnyEvent::Kubernetes::Resource::ServiceAccount;
 use AnyEvent::Kubernetes::Resource::Node;
+
+=head1 NAME
+
+AnyEvent::Kubernetes::ResourceFactory
+
+=cut
+
 
 sub get_resource {
     my($invocant, %params) = @_;

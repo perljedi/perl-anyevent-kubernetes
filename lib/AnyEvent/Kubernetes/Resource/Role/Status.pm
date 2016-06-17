@@ -1,8 +1,16 @@
 package AnyEvent::Kubernetes::Resource::Role::Status;
+
 use strict;
 use warnings;
 
 use Moose::Role;
+
+=head1 NAME
+
+AnyEvent::Kubernetes::Resource::Role::Status
+
+=cut
+
 
 has status => (
     is       => 'rw',

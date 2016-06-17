@@ -5,6 +5,12 @@ use warnings;
 
 use Moose;
 
+=head1 NAME
+
+AnyEvent::Kubernetes::ResourceList
+
+=cut
+
 has api_access => (
     is       => 'ro',
     isa      => 'AnyEvent::Kubernetes::APIAccess',

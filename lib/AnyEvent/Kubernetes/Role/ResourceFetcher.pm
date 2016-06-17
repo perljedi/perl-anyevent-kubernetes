@@ -12,6 +12,13 @@ use syntax 'try';
 requires 'api_access';
 requires 'metadata';
 
+=head1 NAME
+
+AnyEvent::Kubernetes::Role::ResourceFetcher
+
+=cut
+
+
 sub _fetch_resource {
     my $self = shift;
     my $resource = shift;
@@ -30,7 +37,7 @@ sub _fetch_resource {
     $form{fieldSelector}=$self->_build_selector_from_hash($options{fields}) if (exists $options{fields});
     $uri->query_form(%form);
 
-    if($options{change}){
+    if($options{onChange}){
         return $self->api_access->handle_streaming_request(GET => $uri, %options);
     }
     else {

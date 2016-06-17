@@ -9,6 +9,13 @@ extends 'AnyEvent::Kubernetes::Resource';
 
 with 'AnyEvent::Kubernetes::Resource::Role::Updatable';
 
+=head1 NAME
+
+AnyEvent::Kubernetes::Resource::Secret
+
+=cut
+
+
 has data => (
     is   => 'rw',
     isa  => 'HashRef',

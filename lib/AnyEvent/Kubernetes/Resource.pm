@@ -6,6 +6,13 @@ use warnings;
 use Moose;
 use Clone qw(clone);
 
+=head1 NAME
+
+AnyEvent::Kubernetes::Resource
+
+=cut
+
+
 has api_access => (
     is       => 'ro',
     isa      => 'AnyEvent::Kubernetes::APIAccess',
@@ -50,8 +57,8 @@ sub as_hashref
 sub refresh {
     my $self = shift;
     my(%options) = @_;
-    my $cb = delete $options{cb};
-    $self->_fetch_resource('', %options, cb=> sub {
+    my $cb = delete $options{onSuccess};
+    $self->_fetch_resource('', %options, onSuccess=> sub {
         my($new_obj) = shift;
         my $updated = $new_obj->as_hashref;
         foreach my $key (grep(!/kind|apiVersion/, keys %$updated)){

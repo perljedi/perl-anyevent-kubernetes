@@ -40,10 +40,10 @@ describe "AnyEvent::Kubernetes::Resource" => sub {
         it "calls the supplied callback on success" => sub {
             spyOn($sut, '_fetch_resource')->andCallFake(sub {
                 my($resource, %options) = @_;
-                $options{cb}->($sut);
+                $options{onSuccess}->($sut);
             });
             my $called = 0;
-            $sut->refresh(cb => sub {
+            $sut->refresh(onSuccess => sub {
                 $called = 1;
             });
             ok($called);
@@ -51,7 +51,7 @@ describe "AnyEvent::Kubernetes::Resource" => sub {
         it "updates its fields with new results" => sub {
             spyOn($sut, '_fetch_resource')->andCallFake(sub {
                 my($resource, %options) = @_;
-                $options{cb}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(
+                $options{onSuccess}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(
                     kind => 'Pod',
                     metadata => {
                         selfLink => '/api/v1/namespaces/default/pods/mypod',
@@ -65,7 +65,7 @@ describe "AnyEvent::Kubernetes::Resource" => sub {
                     api_access => $sut->api_access
                 ));
             });
-            $sut->refresh(cb => sub { });
+            $sut->refresh(onSuccess => sub { });
             is($sut->status->{updated}, 1);
         };
     };

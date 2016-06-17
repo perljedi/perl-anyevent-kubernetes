@@ -1,9 +1,16 @@
 package AnyEvent::Kubernetes::Resource::Role::Updatable;
+
 use strict;
 use warnings;
 
 use Moose::Role;
 with 'AnyEvent::Kubernetes::Role::ResourceFetcher';
+
+=head1 NAME
+
+AnyEvent::Kubernetes::Resource::Role::Updatable
+
+=cut
 
 sub update {
     my $self = shift;

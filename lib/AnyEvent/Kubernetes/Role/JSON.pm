@@ -1,4 +1,5 @@
 package AnyEvent::Kubernetes::Role::JSON;
+
 use strict;
 use warnings;
 
@@ -6,6 +7,13 @@ use Moose::Role;
 use Moose::Util::TypeConstraints qw(duck_type);
 
 use JSON::MaybeXS;
+
+=head1 NAME
+
+AnyEvent::Kubernetes::Role::JSON
+
+=cut
+
 
 has 'json' => (
     is       => 'ro',

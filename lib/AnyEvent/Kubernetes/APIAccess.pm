@@ -1,4 +1,5 @@
 package AnyEvent::Kubernetes::APIAccess;
+
 use strict;
 use warnings;
 
@@ -10,6 +11,13 @@ use AnyEvent::Kubernetes::ResourceFactory;
 use MIME::Base64;
 
 use syntax 'try';
+
+=head1 NAME
+
+AnyEvent::Kubernetes::APIAccess
+
+=cut
+
 
 has url => (
     is       => 'rw',
@@ -132,19 +140,19 @@ sub handle_simple_request {
         sub {
             my($body, $headers) = @_;
             if($headers->{Status} < 200 || $headers->{Status} > 400){
-                if($options{error}){
+                if($options{onError}){
                     try {
                         my $message = $self->json->decode($body);
-                        $options{error}->($message);
+                        $options{onError}->($message);
                     } catch ($e) {
-                        $options{error}->($body);
+                        $options{onError}->($body);
                     }
                 }
             }else{
                 my $resourceHash = $self->json->decode($body);
                 $resourceList = AnyEvent::Kubernetes::ResourceFactory->get_resource(%$resourceHash, api_access => $self);
-                if($options{cb}){
-                    $options{cb}->($resourceList);
+                if($options{onSuccess}){
+                    $options{onSuccess}->($resourceList);
                 }
             }
             if($cv){
@@ -207,7 +215,7 @@ sub handle_streaming_request {
                             $update = $self->json->decode($chunk);
                             $chunk  = '';
                             $options{resourceVersion} = $update->{object}{metadata}{resourceVersion};
-                            $options{change}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%{ $update->{object} }, api_access => $self), $update->{type});
+                            $options{onChange}->(AnyEvent::Kubernetes::ResourceFactory->get_resource(%{ $update->{object} }, api_access => $self), $update->{type});
                         }
                         catch($e) {
                             # Ignore this error, probably means we have an incomplete JSON
@@ -221,7 +229,6 @@ sub handle_streaming_request {
             sub {
                 my(undef, undef, $message) = @_;
                 if($message eq 'Connection timed out' && $options{auto_reconnect}){
-                    print "reconnecting\n";
                     $loop->();
                 }else{
                     if($options{error}){
@@ -235,7 +242,6 @@ sub handle_streaming_request {
             $handle->on_eof(
                 sub {
                     if($options{auto_reconnect}){
-                        print "reconnecting\n";
                         $loop->();
                     }
                     elsif($options{disconnect}) {
@@ -248,5 +254,7 @@ sub handle_streaming_request {
     $loop->();
     return $cancelSub;
 }
+
+__PACKAGE__->meta->make_immutable;
 
 return 42;

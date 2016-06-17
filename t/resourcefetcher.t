@@ -23,7 +23,7 @@ describe "AnyEvent::Kubernetes::Role::ResourceFetcher" => sub {
         expectSpy($sut->api_access, 'handle_simple_request')->toHaveBeenCalled->once;
     };
     it "calls handle_streaming_request if passed an change callback" => sub {
-        $sut->_fetch_resource('pods', change=> sub {});
+        $sut->_fetch_resource('pods', onChange=> sub {});
         expectSpy($sut->api_access, 'handle_streaming_request')->toHaveBeenCalled->once;
     };
     it "builds the request url correctly" => sub {

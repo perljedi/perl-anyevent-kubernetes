@@ -13,6 +13,12 @@ with 'AnyEvent::Kubernetes::Resource::Role::Spec';
 with 'AnyEvent::Kubernetes::Resource::Role::HasPods';
 with 'AnyEvent::Kubernetes::Resource::Role::Updatable';
 
+=head1 NAME
+
+AnyEvent::Kubernetes::Resource::ReplicationController
+
+=cut
+
 sub scale {
     my $self = shift;
     my $replicas = shift;
@@ -21,13 +27,13 @@ sub scale {
     my $timeout  = delete $options{timeout} || 120;
     my $type = $self->spec->{replicas} < $replicas ? 'up' : 'down';
     $self->spec->{replicas} = $replicas;
-    my $cb = delete $options{cb};
+    my $cb = delete $options{onSuccess};
     my $st = time;
     my(%pods) = ();
     my $seen_delete = 0;
-    $options{cb} = sub {
+    $options{onSuccess} = sub {
         my $cancel;
-        $cancel = $self->get_pods(change => sub {
+        $cancel = $self->get_pods(onChange => sub {
             my($pod, $action) = @_;
             if($action eq 'DELETED'){
                 $seen_delete = 1;
@@ -60,7 +66,6 @@ sub rolling_update {
         $self->spec->{template}{metadata}{labels}{deployment} = $old_deploy;
         $self->update();
     }
-    use Data::Dumper; print Dumper($self->metadata)."\n";
     $new_raw->{spec}{replicas} = 0;
 
     my $deployment_id = create_uuid_as_string();
@@ -77,11 +82,11 @@ sub rolling_update {
     my($scale_up, $scale_down, $clean_up, $new_rc);
 
     $scale_up = sub {
-        $new_rc->scale($new_rc->spec->{replicas} + 1, cb=>$scale_down);
+        $new_rc->scale($new_rc->spec->{replicas} + 1, onSuccess => $scale_down);
     };
 
     $scale_down = sub {
-        $self->scale($self->spec->{replicas} - 1, cb=> sub {
+        $self->scale($self->spec->{replicas} - 1, onSuccess=> sub {
             if($self->spec->{replicas} > 0){
                 $scale_up->();
             }else{
@@ -92,17 +97,17 @@ sub rolling_update {
 
     $clean_up = sub {
         $new_rc->metadata->{name} = $self->metadata->{name};
-        $self->delete(cb => sub {
-            $new_rc->update(cb => sub {
+        $self->delete(onSuccess => sub {
+            $new_rc->update(onSuccess => sub {
                 $options{cb}->($new_rc);
             }, error => sub {use Data::Dumper; print Dumper(@_)."\n"});
         }, error => sub {use Data::Dumper; print Dumper(@_)."\n"});
     };
     my $uri = URI->new_abs("..", $self->api_access->url.$self->metadata->{selfLink});
     $self->api_access->handle_simple_request(
-        POST => $uri.'replicationcontrollers',
-        body => $self->json->encode($new_raw),
-        cb   => sub {
+        POST      => $uri.'replicationcontrollers',
+        body      => $self->json->encode($new_raw),
+        onSuccess => sub {
             $new_rc = shift;
             $scale_up->();
         },

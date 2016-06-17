@@ -7,6 +7,13 @@ use Moose;
 
 extends 'AnyEvent::Kubernetes::Resource';
 
+=head1 NAME
+
+AnyEvent::Kubernetes::Resource::ServiceAccount
+
+=cut
+
+
 has secrets => (
     is  => 'rw',
     isa => 'ArrayRef[HashRef]',

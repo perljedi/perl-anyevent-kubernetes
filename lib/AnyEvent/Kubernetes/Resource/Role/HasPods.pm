@@ -1,9 +1,17 @@
 package AnyEvent::Kubernetes::Resource::Role::HasPods;
+
 use strict;
 use warnings;
 
 use Moose::Role;
 with 'AnyEvent::Kubernetes::Role::ResourceFetcher';
+
+=head1 NAME
+
+AnyEvent::Kubernetes::Resource::Role::HasPods
+
+=cut
+
 
 sub get_pods {
     my $self = shift;

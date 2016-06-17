@@ -10,6 +10,13 @@ use URI;
 extends 'AnyEvent::Kubernetes::Resource';
 with    'AnyEvent::Kubernetes::Role::ResourceFetcher';
 
+=head1 NAME
+
+AnyEvent::Kubernetes::Resource::Namespace
+
+=cut
+
+
 sub list_pods {
     my $self = shift;
     $self->_fetch_resource('pods', @_);

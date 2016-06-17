@@ -5,6 +5,13 @@ use warnings;
 
 use Moose;
 
+=head1 NAME
+
+AnyEvent::Kubernetes::Resource::Endpoints
+
+=cut
+
+
 extends 'AnyEvent::Kubernetes::Resource';
 
 with 'AnyEvent::Kubernetes::Resource::Role::Updatable';
