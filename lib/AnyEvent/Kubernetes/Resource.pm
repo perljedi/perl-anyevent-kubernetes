@@ -54,6 +54,16 @@ sub as_hashref
     };
 }
 
+=head1 Methods
+
+=over
+
+=item refresh(onSuccess=> sub { ... }, onError => sub { ... })
+
+Update fields from kubernetes. The onSuccess callback will be passed the newly updated resource.
+
+=cut
+
 sub refresh {
     my $self = shift;
     my(%options) = @_;
@@ -71,11 +81,21 @@ sub refresh {
     });
 }
 
+=item delete
+
+Delete this resource from kubernetes.
+
+=cut
+
 sub delete {
     my $self = shift;
     my(%options) = @_;
     $self->api_access->handle_simple_request(DELETE => $self->api_access->url.$self->metadata->{selfLink}, %options);
 }
+
+=back
+
+=cut
 
 __PACKAGE__->meta->make_immutable;
 
