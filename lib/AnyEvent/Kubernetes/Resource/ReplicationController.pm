@@ -12,6 +12,7 @@ extends 'AnyEvent::Kubernetes::Resource';
 with 'AnyEvent::Kubernetes::Resource::Role::Spec';
 with 'AnyEvent::Kubernetes::Resource::Role::HasPods';
 with 'AnyEvent::Kubernetes::Resource::Role::Updatable';
+with 'AnyEvent::Kubernetes::Role::ResourceCreator';
 
 =head1 NAME
 
@@ -25,7 +26,7 @@ sub scale {
     my(%options) = @_;
     my $interval = delete $options{update_interval} || 5;
     my $timeout  = delete $options{timeout} || 120;
-    my $type = $self->spec->{replicas} < $replicas ? 'up' : 'down';
+    my $type = $self->spec->{replicas} <= $replicas ? 'up' : 'down';
     $self->spec->{replicas} = $replicas;
     my $cb = delete $options{onSuccess};
     my $st = time;
@@ -59,20 +60,31 @@ sub rolling_update {
     my(%options) = @_;
 
     my $new_raw = clone($self->as_hashref);
-
-    if(! $self->spec->{selector}{deployment}){
-        my $old_deploy = create_uuid_as_string();
-        $self->spec->{selector}{deployment} = $old_deploy;
-        $self->spec->{template}{metadata}{labels}{deployment} = $old_deploy;
-        $self->update();
-    }
     $new_raw->{spec}{replicas} = 0;
 
     my $deployment_id = create_uuid_as_string();
     $new_raw->{metadata}{name} .= $deployment_id;
-    $new_raw->{metadata}{labels}{deployment} = $deployment_id;
     $new_raw->{spec}{selector}{deployment} = $deployment_id;
     $new_raw->{spec}{template}{metadata}{labels}{deployment} = $deployment_id;
+
+    if(! $self->spec->{selector}{deployment}){
+        my $old_deploy = create_uuid_as_string();
+        $self->get_pods(onSuccess=> sub {
+            my($podList) = shift;
+            foreach my $pod (@{ $podList->all }){
+                $pod->metadata->{labels}{deployment}=$old_deploy;
+                $pod->update(onSuccess=> sub {
+                    my $patched = shift;
+                });
+            }
+            $self->spec->{selector}{deployment} = $old_deploy;
+            $self->spec->{template}{metadata}{labels}{deployment} = $old_deploy;
+            $self->update(onSuccess=> sub {
+                $self->rolling_update(%options)
+            });
+        });
+        return;
+    }
 
     delete $new_raw->{metadata}{creationTimestamp};
     delete $new_raw->{metadata}{uid};
@@ -86,7 +98,13 @@ sub rolling_update {
     };
 
     $scale_down = sub {
-        $self->scale($self->spec->{replicas} - 1, onSuccess=> sub {
+        if($options{onScaleUp}){
+            $options{onScaleUp}->("Scaled up new controller to ".$new_rc->spec->{replicas});
+        }
+        $self->scale($self->spec->{replicas} - 1, onSuccess => sub {
+            if($options{onScaleDown}){
+                $options{onScaleDown}->("Scaled down old controller to ".$self->spec->{replicas});
+            }
             if($self->spec->{replicas} > 0){
                 $scale_up->();
             }else{
@@ -98,9 +116,12 @@ sub rolling_update {
     $clean_up = sub {
         $new_rc->metadata->{name} = $self->metadata->{name};
         $self->delete(onSuccess => sub {
-            $new_rc->update(onSuccess => sub {
-                $options{cb}->($new_rc);
-            }, error => sub {use Data::Dumper; print Dumper(@_)."\n"});
+            $new_rc->create($new_rc->as_hashref, onSuccess=> sub {
+                my($final_rc) = @_;
+                $new_rc->delete(onSuccess=> sub {
+                    $options{onSuccess}->($final_rc);
+                });
+            });
         }, error => sub {use Data::Dumper; print Dumper(@_)."\n"});
     };
     my $uri = URI->new_abs("..", $self->api_access->url.$self->metadata->{selfLink});

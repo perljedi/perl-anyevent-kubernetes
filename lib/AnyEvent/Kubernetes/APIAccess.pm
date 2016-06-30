@@ -136,6 +136,7 @@ sub handle_simple_request {
     http_request
         $method, $uri,
         body => $body,
+        timeout => 30,
         %access_options,
         sub {
             my($body, $headers) = @_;

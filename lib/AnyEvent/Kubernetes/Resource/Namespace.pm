@@ -83,6 +83,7 @@ Fetch a specific replication controller by name
 sub get_replication_controller {
     my $self = shift;
     my $name = shift;
+    print "Getting rc $name\n";
     $self->_fetch_resource('replicationcontrollers/'.$name, @_);
 }
 alias get_rc => 'get_replication_controller';

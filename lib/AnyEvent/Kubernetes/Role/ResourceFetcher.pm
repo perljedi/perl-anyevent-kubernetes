@@ -41,6 +41,7 @@ sub _fetch_resource {
         return $self->api_access->handle_streaming_request(GET => $uri, %options);
     }
     else {
+        print "Sending simple request to $uri\n";
         $self->api_access->handle_simple_request(GET => $uri, %options);
     }
 
