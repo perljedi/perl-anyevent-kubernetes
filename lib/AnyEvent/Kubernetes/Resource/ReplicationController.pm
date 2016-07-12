@@ -122,7 +122,7 @@ sub rolling_update {
                     $options{onSuccess}->($final_rc);
                 });
             });
-        }, error => sub {use Data::Dumper; print Dumper(@_)."\n"});
+        }, error => $options{error});
     };
     my $uri = URI->new_abs("..", $self->api_access->url.$self->metadata->{selfLink});
     $self->api_access->handle_simple_request(

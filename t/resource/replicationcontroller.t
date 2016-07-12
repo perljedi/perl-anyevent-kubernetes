@@ -9,7 +9,7 @@ use Jasmine::Spy qw(spyOn stopSpying expectSpy getCalls);
 use base qw(Test::Spec);
 use vars qw($sut);
 
-xdescribe "AnyEvent::Kubernetes::Resource::ReplicationController" => sub {
+describe "AnyEvent::Kubernetes::Resource::ReplicationController" => sub {
     before all => sub {
         my $kube = AnyEvent::Kubernetes->new;
         $sut = AnyEvent::Kubernetes::ResourceFactory->get_resource(
@@ -26,7 +26,7 @@ xdescribe "AnyEvent::Kubernetes::Resource::ReplicationController" => sub {
             api_access => $kube->api_access
         );
     };
-    describe "scale" => sub {
+    xdescribe "scale" => sub {
         before all => sub {
             spyOn($sut, 'update');
             spyOn($sut, 'get_pods');
@@ -106,12 +106,41 @@ xdescribe "AnyEvent::Kubernetes::Resource::ReplicationController" => sub {
             $sut->spec->{selector}{deployment} = "thefirstone";
             getCalls($sut->api_access, 'handle_simple_request')->reset;
         };
+        it "updates it's existing pods with a deployment selector if one is not already present" => sub {
+            my $pod = mock();
+            $pod->stubs('metadata' => {labels=>{}});
+            my $expectation = $pod->expects('update');
+            delete $sut->spec->{selector}{deployment};
+            spyOn($sut, 'update');
+            spyOn($sut, 'get_pods')->andCallFake(sub {
+                my(%opts) = @_;
+                $opts{onSuccess}->(stub(all=>[$pod]));
+            });
+            $sut->rolling_update;
+            ok($expectation->verify);
+        };
         it "updates itself with a deployment selector if one is not already present" => sub {
             delete $sut->spec->{selector}{deployment};
             spyOn($sut, 'update');
+            spyOn($sut, 'get_pods')->andCallFake(sub {
+                my(%opts) = @_;
+                $opts{onSuccess}->(stub(all=>[]));
+            });
             $sut->rolling_update;
             expectSpy($sut, 'update')->toHaveBeenCalled->once;
             ok($sut->spec->{selector}{deployment});
+        };
+        it "creates a new replication controller with a deployment handle" => sub {
+            $sut->rolling_update;
+            expectSpy($sut->api_access, 'handle_simple_request')->toHaveBeenCalled->once;
+            my($method, $uri, %parameters) = @{ getCalls($sut->api_access, 'handle_simple_request')->mostRecent };
+            is($method, 'POST');
+            my($new_rc) = $sut->json->decode($parameters{body});
+            ok(exists($new_rc->{spec}{selector}{deployment}));
+        };
+        after each => sub {
+            getCalls($sut, 'get_pods')->reset;
+            getCalls($sut, 'update')->reset;
         };
     };
 };
